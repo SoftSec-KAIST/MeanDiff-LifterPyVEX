@@ -16,3 +16,7 @@ def sanitize_hexstr(s):
 def lift(arch, insn):
     if arch not in ARCH:
         return to_JSON('AST', 'Incapable', [])
+    if not sanitize_hexstr(insn):
+        return to_JSON('AST', 'Incapable', [])
+
+    return Lifter(arch).lift(insn)
