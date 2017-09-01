@@ -1,4 +1,5 @@
 from .JSON_converter import to_JSON
+from .Lifter import Lifter
 
 ARCH = ['x86', 'x64']
 HEXSTR = '0123456789abcdef'

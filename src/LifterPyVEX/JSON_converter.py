@@ -1,5 +1,7 @@
 import json
 
 def to_JSON(ty, sty, args):
-    target = {'Type' : ty, 'SubType' : sty, 'Args' : args}
+    return {'Type' : ty, 'SubType' : sty, 'Args' : args}
+
+def JSONize(target):
     return json.dumps(target)

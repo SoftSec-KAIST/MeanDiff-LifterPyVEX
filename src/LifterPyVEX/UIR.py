@@ -1,10 +1,7 @@
 import JSON_converter
 
 class Basic:
-    def __init__(self):
-        pass
-
-    def cons(self, value):
+    def __init__(self, value):
         self.value = value
 
     def to_JSON(self):
@@ -291,11 +288,9 @@ class Expr(Base):
         return JSON_converter.to_JSON('Expr', self.sty, args)
 
 class Num(Expr):
-    def __init__(self):
+    def __init__(self, value, size):
         Expr.__init__(self)
         self.sty = 'Num'
-
-    def cons(self, value, size):
         self.value = value
         self.size = size
 
@@ -304,11 +299,9 @@ class Num(Expr):
         return Expr.to_JSON(self)
 
 class Var(Expr):
-    def __init__(self):
+    def __init__(self, name, size):
         Expr.__init__(self)
         self.sty = 'Var'
-
-    def cons(self, name, size):
         self.name = name
         self.size = size
 
@@ -317,11 +310,9 @@ class Var(Expr):
         return Expr.to_JSON(self)
 
 class Load(Expr):
-    def __init__(self):
+    def __init__(self, addr, size):
         Expr.__init__(self)
         self.sty = 'Load'
-
-    def cons(self, addr, size):
         self.addr = addr
         self.size = size
 
@@ -330,11 +321,9 @@ class Load(Expr):
         return Expr.to_JSON(self)
 
 class UnOp(Expr):
-    def __init__(self):
+    def __init__(self, op, expr):
         Expr.__init__(self)
         self.sty = 'UnOp'
-
-    def cons(self, op, expr):
         self.op = op
         self.expr = expr
 
@@ -343,11 +332,9 @@ class UnOp(Expr):
         return Expr.to_JSON(self)
 
 class BinOp(Expr):
-    def __init__(self):
+    def __init__(self, op, expr1, expr2):
         Expr.__init__(self)
         self.sty = 'BinOp'
-
-    def cons(self, op, expr1, expr2):
         self.op = op
         self.expr1 = expr1
         self.expr2 = expr2
@@ -357,11 +344,9 @@ class BinOp(Expr):
         return Expr.to_JSON(self)
 
 class RelOp(Expr):
-    def __init__(self):
+    def __init__(self, op, expr1, expr2):
         Expr.__init__(self)
         self.sty = 'RelOp'
-
-    def cons(self, op, expr1, expr2):
         self.op = op
         self.expr1 = expr1
         self.expr2 = expr2
@@ -371,11 +356,9 @@ class RelOp(Expr):
         return Expr.to_JSON(self)
 
 class Cast(Expr):
-    def __init__(self):
+    def __init__(self, op, size, expr):
         Expr.__init__(self)
         self.sty = 'Cast'
-
-    def cons(self, op, size, expr):
         self.op = op
         self.size = size
         self.expr = expr
@@ -385,11 +368,9 @@ class Cast(Expr):
         return Expr.to_JSON(self)
 
 class Ite(Expr):
-    def __init__(self):
+    def __init__(self, cond, thenExpr, elseExpr):
         Expr.__init__(self)
         self.sty = 'Ite'
-
-    def cons(self, cond, thenExpr, elseExpr):
         self.cond = cond
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
@@ -415,11 +396,9 @@ class Stmt(Base):
         return JSON_converter.to_JSON('Stmt', self.sty, args)
 
 class Start(Stmt):
-    def __init__(self):
+    def __init__(self, addr, len, endian):
         Stmt.__init__(self)
         self.sty = 'Start'
-
-    def cons(self, addr, len, endian):
         self.addr = addr
         self.len = len
         self.endian = endian
@@ -429,11 +408,9 @@ class Start(Stmt):
         return Stmt.to_JSON(self)
 
 class Move(Stmt):
-    def __init__(self):
+    def __init__(self, name, size, expr):
         Stmt.__init__(self)
         self.sty = 'Move'
-
-    def cons(self, name, size, expr):
         self.name = name
         self.size = size
         self.expr = expr
@@ -443,11 +420,9 @@ class Move(Stmt):
         return Stmt.to_JSON(self)
 
 class Store(Stmt):
-    def __init__(self):
+    def __init__(self, addr, expr):
         Stmt.__init__(self)
         self.sty = 'Store'
-
-    def cons(self, addr, expr):
         self.addr = addr
         self.expr = expr
 
@@ -456,11 +431,9 @@ class Store(Stmt):
         return Stmt.to_JSON(self)
 
 class Label(Stmt):
-    def __init__(self):
+    def __init__(self, lbl):
         Stmt.__init__(self)
         self.sty = 'Label'
-
-    def cons(self, lbl):
         self.lbl = lbl
 
     def to_JSON(self):
@@ -468,11 +441,9 @@ class Label(Stmt):
         return Stmt.to_JSON(self)
 
 class CJump(Stmt):
-    def __init__(self):
+    def __init__(self, cond, thenLbl, elseLbl):
         Stmt.__init__(self)
         self.sty = 'CJump'
-
-    def cons(self, cond, thenLbl, elseLbl):
         self.cond = cond
         self.thenLbl = thenLbl
         self.elseLbl = elseLbl
@@ -482,11 +453,9 @@ class CJump(Stmt):
         return Stmt.to_JSON(self)
 
 class End(Stmt):
-    def __init__(self):
+    def __init__(self, addr):
         Stmt.__init__(self)
         self.sty = 'End'
-
-    def cons(self, addr):
         self.addr = addr
 
     def to_JSON(self):
@@ -510,12 +479,9 @@ class AST(Base):
         return JSON_converter.to_JSON('AST', self.sty, args)
 
 class Stmts(AST):
-    def __init__(self):
+    def __init__(self, stmts):
         AST.__init__(self)
         self.sty = 'Stmts'
-        self.stmts = []
-
-    def cons(self, stmts):
         self.stmts = stmts
 
     def to_JSON(self):
