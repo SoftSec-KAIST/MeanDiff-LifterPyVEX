@@ -71,7 +71,6 @@ class Lifter:
         self.lbl = 0
 
         self.ftop = False
-        self.cas = False
 
     def lift(self, insn):
         try:
@@ -121,8 +120,6 @@ class Lifter:
             if self.ftop == False:
                 raise NotImplemented
         elif ty == 'WrTmp':
-            if self.cas == True:
-                return
             name = Basic(parsed['name'])
             size = Basic(parsed['size'])
             if parsed['expr']['ty'] == 'CCall':
@@ -172,9 +169,6 @@ class Lifter:
             stmt = Store(parsed['addr']['expr'], parsed['data']['expr'])
             self.statements.append(stmt)
         elif ty == 'Exit':
-            if self.cas == True:
-                self.cas = False
-                return
             thenLbl = Basic('Label%d' % self.lbl)
             self.lbl += 1
             elseLbl = Basic('Label%d' % self.lbl)
@@ -188,10 +182,26 @@ class Lifter:
             self.statements.append(Label(elseLbl))
         elif ty == 'CAS':
             addr = parsed['addr']['expr']
+            expd = parsed['expd']['expr']
             expr = parsed['expr']['expr']
+            tmp = parsed['tmp']
+            size = parsed['size']
+            cond = EQ(Load(addr, size), expd)
+            thenLbl = Basic('Label%d' % self.lbl)
+            self.lbl += 1
+            elseLbl = Basic('Label%d' % self.lbl)
+            self.lbl += 1
+            stmt = CJump(cond, thenLbl, elseLbl)
+            self.statements.append(stmt)
+            self.statements.append(Label(thenLbl))
             stmt = Store(addr, expr)
             self.statements.append(stmt)
-            self.cas = True
+            lbl = Basic('Label%d' % self.lbl)
+            self.elselbl += 1
+            self.statements.append(Label(elselbl))
+            name = 't%d' % tmp
+            stmt = Move(name, size, expr)
+            self.statements.append(stmt)
         elif ty == 'AbiHint':
             return
         else:
@@ -242,9 +252,15 @@ class Lifter:
         elif isinstance(stmt, pyvex.stmt.CAS):
             res['ty'] = 'CAS'
             addr = stmt.addr
+            expd = stmt.expdLo
             expr = stmt.dataLo
+            tmp = stmt.oldLo
+            size = self._get_size(expr)
             res['addr'] = self.fetch_expr(addr)
+            res['expd'] = self.fetch_expr(expd)
             res['expr'] = self.fetch_expr(expr)
+            res['size'] = size
+            res['tmp'] = stmt.oldLo
         elif isinstance(stmt, pyvex.stmt.LLSC):
             raise NotImplemented
         elif isinstance(stmt, pyvex.stmt.Dirty):
@@ -277,6 +293,12 @@ class Lifter:
                 res['expr'] = High(64, Var(Basic('xmm1'), Basic(128)))
             elif self.addr == 0x8048000 and name == '164':
                 raise IncapableError
+            elif self.addr == 0x8048000 and name == 'd':
+                var = Var(Basic('df'), Basic(1))
+                num0 = Num(Basic(0), Basic(1))
+                num1 = Num(Basic(1), Basic(32))
+                num2 = Num(Basic(0xffffffff), Basic(32))
+                res['expr'] = Ite(EQ(var, num0), num1, num2)
             elif self.addr == 0x401000 and name == '228':
                 raise IncapableError
             elif self.addr == 0x401000 and name == '232':
