@@ -79,6 +79,10 @@ def Slt(expr1, expr2):
     op = SLT()
     return RelOp(op, expr1, expr2)
 
+def Ule(expr1, expr2):
+    op = ULE()
+    return RelOp(op, expr1, expr2)
+
 def Ult(expr1, expr2):
     op = ULT()
     return RelOp(op, expr1, expr2)
@@ -1119,16 +1123,7 @@ def fetch_binop(op, expr1, expr2):
     else:
         print op
         raise NotImplemented
-'''
-    def eflags_pf(self, arg):
-        t0 = self.ef_xor(self.ef_shr(arg, self.ef_num(4, 8)), arg)
-        t1 = self.ef_xor(self.ef_shr(t0, self.ef_num(2, 8)), t0)
-        t2 = self.ef_xor(self.ef_shr(t1, self.ef_num(1, 8)), t1)
-        t3 = self.ef_low(t2, 8, 1)
-        return self.ef_not(t3)
-'''
 
-'''
 CF_POS = 0
 PF_POS = 2
 AF_POS = 4
@@ -1172,6 +1167,13 @@ def eflags32_cf4(arg0, arg1, size, flag):
         return Neq(arg0, Number(0, size))
     else:
         return Neq(arg0, Sshr(arg1, Number(size - 1, size)))
+
+def eflags32_pf(arg0):
+    t0 = Xor(Ushr(arg0, Number(4, 8)), arg0)
+    t1 = Xor(Ushr(t0, Number(2, 8)), t0)
+    t2 = Xor(Ushr(t1, Number(1, 8)), t1)
+    t3 = Low(1, t2)
+    return Not(t3)
 
 def eflags32_af(arg0, arg1, arg2):
     t0 = Xor(Xor(arg0, arg1), arg2)
@@ -1220,8 +1222,8 @@ def eflags32_of2(arg, size, flag):
 
 def eflags32_of3(arg0, arg1, size):
     t0 = eflags32_lshift(12 - size, Xor(arg0, arg1))
-    t1 = ef_and(t0, Number(OF_MASK, 32))
-    t2 = ef_shr(t1, Number(OF_POS, 32))
+    t1 = And(t0, Number(OF_MASK, 32))
+    t2 = Ushr(t1, Number(OF_POS, 32))
     return Low(1, t2)
 
 def eflags32_of4(arg0):
@@ -1352,7 +1354,7 @@ def eflags32_dec(size, cc_dep1):
     res = cc_dep1
     argL = Add(res, Number(1, 32))
     argR = Number(1, 32)
-    res_t = Low(32, res)
+    res_t = Low(size, res)
     res_c = Low(8, res)
 
     flags = {}
@@ -1464,4 +1466,3 @@ def eflags32_smul(size, cc_dep1, cc_dep2):
     flags['of'] = eflags32_of4(flags['cf'])
 
     return flags
-'''

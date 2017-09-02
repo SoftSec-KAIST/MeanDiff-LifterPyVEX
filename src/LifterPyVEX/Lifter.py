@@ -72,6 +72,11 @@ class Lifter:
 
         self.ftop = False
 
+        self.cc_op = None
+        self.cc_dep1 = None
+        self.cc_dep2 = None
+        self.cc_ndep = None
+
     def lift(self, insn):
         try:
             self.irsb = pyvex.IRSB(insn.decode('hex'), self.addr, self.arch)
@@ -111,6 +116,22 @@ class Lifter:
         elif ty == 'Put':
             if parsed['name'] == 'ftop':
                 self.ftop = True
+            elif parsed['name'].startswith('cc_'):
+                if parsed['name'] == 'cc_op':
+                    self.cc_op = parsed['expr']['expr']
+                elif parsed['name'] == 'cc_dep1':
+                    self.cc_dep1 = parsed['expr']['expr']
+                elif parsed['name'] == 'cc_dep2':
+                    self.cc_dep2 = parsed['expr']['expr']
+                elif parsed['name'] == 'cc_ndep':
+                    self.cc_ndep = parsed['expr']['expr']
+                if self.check_eflags_cond():
+                    statements = self.calc_eflags()
+                    self.cc_op = None
+                    self.cc_dep1 = None
+                    self.cc_dep2 = None
+                    self.cc_ndep = None
+                    self.statements += statements
             else:
                 name = Basic(parsed['name'])
                 size = Basic(parsed['size'])
@@ -186,7 +207,7 @@ class Lifter:
             expr = parsed['expr']['expr']
             tmp = parsed['tmp']
             size = parsed['size']
-            cond = EQ(Load(addr, size), expd)
+            cond = Eq(Load(addr, Basic(size)), expd)
             thenLbl = Basic('Label%d' % self.lbl)
             self.lbl += 1
             elseLbl = Basic('Label%d' % self.lbl)
@@ -197,10 +218,10 @@ class Lifter:
             stmt = Store(addr, expr)
             self.statements.append(stmt)
             lbl = Basic('Label%d' % self.lbl)
-            self.elselbl += 1
-            self.statements.append(Label(elselbl))
+            self.lbl += 1
+            self.statements.append(Label(elseLbl))
             name = 't%d' % tmp
-            stmt = Move(name, size, expr)
+            stmt = Move(Basic(name), Basic(size), expr)
             self.statements.append(stmt)
         elif ty == 'AbiHint':
             return
@@ -298,7 +319,7 @@ class Lifter:
                 num0 = Num(Basic(0), Basic(1))
                 num1 = Num(Basic(1), Basic(32))
                 num2 = Num(Basic(0xffffffff), Basic(32))
-                res['expr'] = Ite(EQ(var, num0), num1, num2)
+                res['expr'] = Ite(Eq(var, num0), num1, num2)
             elif self.addr == 0x401000 and name == '228':
                 raise IncapableError
             elif self.addr == 0x401000 and name == '232':
@@ -391,3 +412,53 @@ class Lifter:
 
     def _get_size(self, data):
         return data.result_size(self.tyenv)
+
+    def check_eflags_cond(self):
+        return None not in [self.cc_op, self.cc_dep1,
+                            self.cc_dep2, self.cc_ndep]
+
+    def calc_eflags(self):
+        if isinstance(self.cc_op, Num):
+            op = self.cc_op.value.value
+            size = 8 * (2 ** ((op - 1) % 3))
+            op = (op + 2) / 3
+
+            if op == 0:
+                flags = eflags32_copy(self.cc_dep1)
+            elif op == 1:
+                flags = eflags32_add(size, self.cc_dep1, self.cc_dep2)
+            elif op == 2:
+                flags = eflags32_sub(size, self.cc_dep1, self.cc_dep2)
+            elif op == 3:
+                flags = eflags32_adc(size, self.cc_dep1,
+                                     self.cc_dep2, self.cc_ndep)
+            elif op == 4:
+                flags = eflags32_sbb(size, self.cc_dep1,
+                                     self.cc_dep2, self.cc_ndep)
+            elif op == 5:
+                flags = eflags32_logic(size, self.cc_dep1)
+            elif op == 6:
+                flags = eflags32_inc(size, self.cc_dep1)
+            elif op == 7:
+                flags = eflags32_dec(size, self.cc_dep1)
+            elif op == 8:
+                flags = eflags32_shl(size, self.cc_dep1, self.cc_dep2)
+            elif op == 9:
+                flags = eflags32_shr(size, self.cc_dep1, self.cc_dep2)
+            elif op == 10:
+                flags = eflags32_rol(size, self.cc_dep1, self.cc_ndep)
+            elif op == 11:
+                flags = eflags32_ror(size, self.cc_dep1, self.cc_ndep)
+            elif op == 12:
+                flags = eflags32_umul(size, self.cc_dep1, self.cc_dep2)
+            elif op == 13:
+                flags = eflags32_smul(size, self.cc_dep1, self.cc_dep2)
+
+            names = ['cf', 'pf', 'af', 'zf', 'sf', 'of']
+            stmts = []
+            for name in names:
+                if flags[name] is not None:
+                    stmts.append(Move(Basic(name), Basic(1), flags[name]))
+            return stmts
+        else:
+            raise IncapableError
