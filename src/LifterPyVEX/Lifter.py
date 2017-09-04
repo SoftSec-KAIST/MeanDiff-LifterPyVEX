@@ -247,9 +247,26 @@ class Lifter:
             data = stmt.data
             size = self._get_size(data)
             name = self.arch.translate_register_name(offset, size / 8)
-            res['name'] = name
-            res['size'] = size
-            res['expr'] = self.fetch_expr(data)
+            if self.addr == 0x8048000 and name == '168':
+                res['name'] = 'xmm0'
+                res['size'] = 128
+                expr = self.fetch_expr(data)['expr']
+                var = Var(Basic('xmm0'), Basic(128))
+                var = Zero(128, Low(64, var))
+                expr = Or(var, Shl_n(64, 128, Zero(128, expr)))
+                res['expr'] = {'ty' : 'Binop', 'expr' : expr}
+            else:
+                orig_size = self.name_size_pair[name] * 8
+                res['name'] = name
+                res['size'] = orig_size
+                if size < orig_size:
+                    var = Var(Basic(name), Basic(orig_size))
+                    expr = Zero(orig_size, High(orig_size - size, var))
+                    expr = Shl_n(size, orig_size, expr)
+                    expr = Or(expr, Zero(orig_size, self.fetch_expr(data)['expr']))
+                    res['expr'] = {'ty' : 'Binop', 'expr' : expr}
+                else:
+                    res['expr'] = self.fetch_expr(data)
         elif isinstance(stmt, pyvex.stmt.PutI):
             res['ty'] = 'PutI'
         elif isinstance(stmt, pyvex.stmt.WrTmp):
