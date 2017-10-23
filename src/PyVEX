@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from LifterPyVEX import lift
+from LifterPyVEX-src import lift
 import sys
 
 if __name__ == '__main__':
